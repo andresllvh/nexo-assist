@@ -26,8 +26,11 @@ export type TurnInput =
   | { kind: 'cancel_draft'; draftId: string }
   | { kind: 'select_ticket'; ticketId: string }
 
-/** Abaixo disso o agent não decide sozinho: chama um analista. */
-export const MIN_CONFIDENCE = 0.4
+/**
+ * Abaixo disso o agent não tem segurança: na primeira vez pede para a pessoa explicar melhor;
+ * se a mensagem seguinte também ficar abaixo, chama um analista.
+ */
+export const MIN_CONFIDENCE = 0.5
 
 const MODEL = process.env.NEXO_MODEL ?? 'google/gemini-3.5-flash-lite'
 // entender a mensagem é uma tarefa simples: um modelo menor custa menos e tem cota separada
@@ -170,7 +173,7 @@ async function decideAndAct(turn: TurnContext, conversation: ConversationRow, in
   const pending = await turn.store.pendingDraft(conversation.id)
   const route = await understand(turn, history, text, pending ? `${pending.id}: ${pending.title}` : null)
 
-  if (route.confianca < MIN_CONFIDENCE) {
+  if (route.confianca < MIN_CONFIDENCE && previousTurnWasUnsure(history)) {
     return handOffOutcome(turn, route, 'baixa_confianca', history)
   }
   if (route.intencao === 'falar_com_analista') return handOffOutcome(turn, route, 'pedido', history)
@@ -178,6 +181,12 @@ async function decideAndAct(turn: TurnContext, conversation: ConversationRow, in
   if (route.intencao === 'cancelar' && pending) return cancelOutcome(turn, pending.id, route.motivo, route)
 
   return agentOutcome(turn, history, route)
+}
+
+/** A última resposta do agent também foi dada sem segurança? (a mensagem atual já está no fim do histórico) */
+function previousTurnWasUnsure(history: Awaited<ReturnType<TurnContext['store']['messages']>>): boolean {
+  const lastAgent = history.findLast((m) => m.author === 'agent')
+  return !!lastAgent?.trace && lastAgent.trace.decision.confidence < MIN_CONFIDENCE
 }
 
 /** Etapa de entendimento (modelo com saída estruturada). */

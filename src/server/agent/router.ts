@@ -29,7 +29,9 @@ Intenções:
 - confirmar: aprova o rascunho que está aguardando confirmação ("pode criar", "sim", "confirmo").
 - corrigir: quer mudar algo no rascunho pendente.
 - cancelar: desiste do rascunho pendente ou da ação proposta.
-- fora_do_escopo: RH, financeiro, folha, férias, facilities, limpeza, assuntos pessoais.
+- fora_do_escopo: o PEDIDO é de RH, financeiro (reembolso, pagamento, nota fiscal), folha, férias, facilities, limpeza ou assunto pessoal.
+  Atenção: o departamento de quem escreve não muda o escopo. Sistema, computador ou acesso com problema é TI mesmo
+  que seja da área Financeira ou de RH (ex.: "o sistema de folha do RH não abre" é abrir_chamado).
 - conversa: cumprimento, agradecimento, "não, obrigado" ou algo sem pedido.
 
 Confiança (0 a 1):

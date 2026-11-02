@@ -58,7 +58,7 @@ export function createNexoAgent(model: string) {
       const profile = `Funcionário logado: ${turn.employee.name} (chame de ${firstName(turn.employee.name)}), área ${turn.employee.department}, notebook com ${turn.employee.os}.`
       const clock = `Agora: ${WEEKDAYS[local.getUTCDay()]}, ${formatLocalDate(now)}, ${formatLocalTime(now)} (horário de Brasília). Expediente do service desk: seg a sex, 8h às 18h.`
       const understood = route
-        ? `Etapa de entendimento desta mensagem: intenção "${INTENT_LABEL[route.intencao]}" (confiança ${Math.round(route.confianca * 100)}%), ${route.entendimento}.${route.chamado ? ` Chamado citado: ${route.chamado}.` : ''}${route.confianca < 0.6 ? ' Confiança baixa: confirme o que a pessoa quer antes de agir.' : ''}`
+        ? `Etapa de entendimento desta mensagem: intenção "${INTENT_LABEL[route.intencao]}" (confiança ${Math.round(route.confianca * 100)}%), ${route.entendimento}.${route.chamado ? ` Chamado citado: ${route.chamado}.` : ''}${route.confianca < 0.5 ? ' Você NÃO entendeu bem o pedido: não use ferramentas de ação; peça, em uma frase, para a pessoa explicar o que precisa (se quiser, ofereça opções). Se ela continuar sem deixar claro, um analista será chamado.' : route.confianca < 0.75 ? ' Há alguma dúvida: confirme o que a pessoa quer antes de agir.' : ''}`
         : ''
       const known = describePrefetch(requestContext.get('prefetch') as Prefetch | undefined)
       return [`Você é o Nexo Assist, atendente virtual do service desk de TI da Nexo.`, profile, clock, RULES, STYLE, known, understood]
