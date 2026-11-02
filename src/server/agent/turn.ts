@@ -62,6 +62,7 @@ export async function runTurn(args: {
   if ((await app.conversations.countEmployeeMessages(conversation.id)) >= MESSAGE_LIMIT) {
     throw new TurnRejectedError(`Você chegou ao limite de ${MESSAGE_LIMIT} mensagens desta sessão. Comece uma nova conversa.`)
   }
+  await enforceUsageLimits(app.conversations, employee.id)
 
   const turn = createTurnContext({ employee, conversationId: conversation.id, store: app.conversations, rawTickets: app.tickets, emit })
   const employeeText = await describeInput(turn, input)
@@ -117,6 +118,20 @@ export async function runTurn(args: {
   }
   const fresh = await app.conversations.get(conversation.id)
   if (fresh) emit({ type: 'conversation', conversation: await app.conversations.view(fresh) })
+}
+
+// Limites de uso para a versão publicada: evitam abuso e custo inesperado com o modelo.
+const PER_HOUR = Number(process.env.NEXO_LIMIT_PER_HOUR ?? 60)
+const PER_DAY = Number(process.env.NEXO_LIMIT_PER_DAY ?? 500)
+
+async function enforceUsageLimits(store: TurnContext['store'], employeeId: string): Promise<void> {
+  const now = Date.now()
+  if ((await store.employeeMessagesSince(employeeId, new Date(now - 3_600_000))) >= PER_HOUR) {
+    throw new TurnRejectedError('Você enviou muitas mensagens na última hora. Tente de novo mais tarde ou ligue no ramal 4000.')
+  }
+  if ((await store.modelRepliesSince(new Date(now - 86_400_000))) >= PER_DAY) {
+    throw new TurnRejectedError('O assistente atingiu o limite de uso de hoje. Ligue no ramal 4000 para falar com o service desk.')
+  }
 }
 
 /**

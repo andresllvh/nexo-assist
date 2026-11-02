@@ -72,13 +72,18 @@ export async function migrate(db: Client): Promise<void> {
   for (const statement of SCHEMA) await db.execute(statement)
 }
 
-export function createDb(url: string): Client {
+/** URL do banco: DATABASE_URL, ou as variáveis que a integração do Turso cria na Vercel, ou o arquivo local. */
+export function databaseUrl(): string {
+  return process.env.DATABASE_URL || process.env.TURSO_DATABASE_URL || 'file:data/nexo.db'
+}
+
+export function createDb(url: string = databaseUrl()): Client {
   if (url.startsWith('file:') && !url.includes(':memory:')) {
     const path = url.slice('file:'.length)
     const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '.'
     mkdirSync(dir, { recursive: true })
   }
-  return createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN })
+  return createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN || process.env.TURSO_AUTH_TOKEN })
 }
 
 /** Próximo número de uma sequência (INC, REQ, rascunho). */

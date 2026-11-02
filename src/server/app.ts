@@ -15,7 +15,7 @@ type App = {
 const globalForApp = globalThis as unknown as { nexoApp?: Promise<App> }
 
 async function boot(): Promise<App> {
-  const db = createDb(process.env.DATABASE_URL ?? 'file:data/nexo.db')
+  const db = createDb()
   await migrate(db)
   await ensureSeeded(db)
   const failureRate = Number(process.env.TICKETS_FAILURE_RATE ?? 0.1)

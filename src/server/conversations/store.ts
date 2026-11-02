@@ -125,6 +125,25 @@ export class ConversationStore {
     return Number(rs.rows[0]?.n ?? 0)
   }
 
+  /** Mensagens enviadas por um funcionário desde `since` (todas as conversas): base do limite por hora. */
+  async employeeMessagesSince(employeeId: string, since: Date): Promise<number> {
+    const rs = await this.db.execute({
+      sql: `SELECT COUNT(*) AS n FROM messages m JOIN conversations c ON c.id = m.conversation_id
+            WHERE c.employee_id = ? AND m.author = 'employee' AND m.created_at > ?`,
+      args: [employeeId, since.getTime()],
+    })
+    return Number(rs.rows[0]?.n ?? 0)
+  }
+
+  /** Respostas do agent que passaram pelo modelo desde `since`, no sistema todo: base do teto diário de custo. */
+  async modelRepliesSince(since: Date): Promise<number> {
+    const rs = await this.db.execute({
+      sql: `SELECT COUNT(*) AS n FROM messages WHERE author = 'agent' AND created_at > ? AND trace LIKE '%"path":"agent"%'`,
+      args: [since.getTime()],
+    })
+    return Number(rs.rows[0]?.n ?? 0)
+  }
+
   async handOff(conversationId: string, handoff: Handoff, ticketId: string | null): Promise<void> {
     await this.db.execute({
       sql: `UPDATE conversations SET status = 'waiting', assigned_analyst_id = NULL,

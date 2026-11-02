@@ -61,4 +61,15 @@ describe('ConversationStore', () => {
     expect(view.ticketId).toBe('INC-20311')
     expect(view.handoff?.summary).toBe('resumo')
   })
+
+  it('conta mensagens do funcionário em todas as conversas para o limite por hora', async () => {
+    const a = await store.create('e-ana')
+    const b = await store.create('e-ana')
+    for (const conv of [a, b]) {
+      await store.addMessage({ conversationId: conv.id, author: 'employee', authorId: 'e-ana', text: 'oi' })
+    }
+    await store.addMessage({ conversationId: a.id, author: 'agent', authorId: null, text: 'olá' })
+    expect(await store.employeeMessagesSince('e-ana', new Date(Date.now() - 3_600_000))).toBe(2)
+    expect(await store.employeeMessagesSince('e-carla', new Date(Date.now() - 3_600_000))).toBe(0)
+  })
 })
