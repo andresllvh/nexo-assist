@@ -9,8 +9,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "db:seed": "tsx scripts/seed.ts",
-    "eval": "tsx scripts/eval-decisions.ts"
+    "db:seed": "tsx scripts/seed.mts",
+    "eval": "tsx scripts/eval-decisions.mts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.109",
