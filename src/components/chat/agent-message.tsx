@@ -78,7 +78,9 @@ function StatusLine({
   )
 }
 
-function BlockView({ block, handlers }: { block: Block; handlers: BlockHandlers }) {
+const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim()
+
+function BlockView({ block, handlers, text }: { block: Block; handlers: BlockHandlers; text: string }) {
   switch (block.kind) {
     case 'ticket_selector':
       return (
@@ -106,7 +108,8 @@ function BlockView({ block, handlers }: { block: Block; handlers: BlockHandlers 
         <div className="w-full max-w-[600px] rounded-[4px_12px_12px_12px] border border-rule bg-paper px-4 py-3">
           <Options
             options={block.options}
-            question={block.question}
+            // o agent costuma escrever a pergunta no texto também; não repete
+            question={block.question && !normalize(text).includes(normalize(block.question)) ? block.question : null}
             active={handlers.interactive}
             disabled={!handlers.interactive || handlers.busy}
             onPick={handlers.onOption}
@@ -137,7 +140,7 @@ export function AgentMessage({ message, handlers }: { message: MessageView; hand
       {message.blocks.length > 0 && (
         <div className="flex w-full flex-col items-start gap-2">
           {message.blocks.map((block, i) => (
-            <BlockView key={i} block={block} handlers={handlers} />
+            <BlockView key={i} block={block} handlers={handlers} text={message.text} />
           ))}
         </div>
       )}

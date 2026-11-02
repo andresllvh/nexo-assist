@@ -142,7 +142,8 @@ export const prepareTicket = defineTool({
         motivoDaPrioridade: result.draft.priorityRule,
         prazo: result.draft.slaLabel,
         afetados: IMPACT_LABEL[result.draft.affected],
-        instrucao: 'Explique em uma frase a prioridade e peça para conferir. O chamado só é criado quando ele confirmar.',
+        instrucao:
+          'Explique em uma frase a prioridade e peça para conferir o cartão do rascunho (ele aparece logo depois da sua mensagem). O chamado só é criado quando ele clicar em Confirmar.',
       },
       label: `montou o rascunho ${result.draft.id}`,
       chips: ['montou o rascunho'],
