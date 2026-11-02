@@ -1,0 +1,7 @@
+# variáveis locais e banco local não vão para o deploy (a Vercel usa as próprias variáveis de ambiente)
+.env
+.env.*
+!.env.example
+data
+scratch
+.claude
