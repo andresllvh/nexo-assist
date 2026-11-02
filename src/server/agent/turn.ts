@@ -81,20 +81,8 @@ export async function runTurn(args: {
   try {
     outcome = await decideAndAct(turn, conversation, input, employeeText)
   } catch (error) {
-    // falha do modelo ou do legado não derruba a conversa: responde com o que deu para fazer
-    outcome = {
-      text: 'Tive um problema para concluir agora. Pode tentar de novo em alguns segundos? Se for urgente, posso chamar um analista.',
-      decision: {
-        intent: 'conversa',
-        understood: employeeText,
-        action: 'não concluiu por erro técnico',
-        confidence: 0,
-        reason: errorMessage(error),
-      },
-      path: 'regra',
-      usage: null,
-    }
-    turn.blocks.push({ kind: 'options', question: null, options: ['Tentar de novo', 'Falar com um analista'] })
+    console.error('[turn]', error)
+    outcome = failureOutcome(turn, employeeText, error)
   }
 
   const trace: Trace = {
@@ -126,6 +114,36 @@ export async function runTurn(args: {
   }
   const fresh = await app.conversations.get(conversation.id)
   if (fresh) emit({ type: 'conversation', conversation: await app.conversations.view(fresh) })
+}
+
+/**
+ * Falha do modelo (ex.: limite de uso) ou do legado não derruba a conversa. Se o agent já tinha mostrado
+ * algo útil (uma pergunta com opções, um cartão), a resposta aproveita isso em vez de descartar.
+ */
+function failureOutcome(turn: TurnContext, understood: string, error: unknown): Outcome {
+  const question = turn.blocks.find((b) => b.kind === 'options')
+  const partial = turn.blocks.length > 0
+  const limit = /quota|rate limit|429/i.test(error instanceof Error ? `${error.message} ${String((error as { cause?: unknown }).cause ?? '')}` : String(error))
+  if (!partial) turn.blocks.push({ kind: 'options', question: null, options: ['Tentar de novo', 'Falar com um analista'] })
+  return {
+    text:
+      question?.kind === 'options' && question.question
+        ? question.question
+        : partial
+          ? 'Confira acima. Se precisar, me diga como continuar.'
+          : limit
+            ? 'O assistente atingiu o limite de uso do modelo agora. Tente de novo em instantes ou fale com um analista.'
+            : 'Tive um problema para concluir agora. Pode tentar de novo em alguns segundos? Se for urgente, posso chamar um analista.',
+    decision: {
+      intent: 'conversa',
+      understood,
+      action: partial ? 'concluiu só parte da resposta' : 'não concluiu por erro técnico',
+      confidence: 0,
+      reason: limit ? 'o provedor do modelo recusou a chamada por limite de uso (cota)' : errorMessage(error),
+    },
+    path: 'regra',
+    usage: null,
+  }
 }
 
 async function describeInput(turn: TurnContext, input: TurnInput): Promise<string> {
