@@ -68,6 +68,27 @@ describe('legado instável', () => {
     expect(retries).toEqual([1, 2])
   })
 
+  it('nova tentativa depois de falha não cria chamado duplicado', async () => {
+    // falha só na 1ª chamada; se a gravação fizesse uma 2ª chamada ao legado, um retry duplicaria o chamado
+    let calls = 0
+    const service = await setup(0.5, () => (calls++ === 0 ? 0 : 1))
+    const client = resilient(service, { delaysMs: [1, 1] })
+    const ticket = await client.create({
+      type: 'INC',
+      title: 'Teams não abre',
+      description: 'Fecha sozinho',
+      category: 'Software',
+      subcategory: null,
+      priority: 'Média',
+      requesterId: 'e-ana',
+      affected: 'individual',
+    })
+    expect(ticket.id).toBe('INC-20517')
+    const mine = await service.listByRequester('e-ana')
+    expect(mine.filter((t) => t.title === 'Teams não abre')).toHaveLength(1)
+    expect(calls).toBe(3) // falha + criação + listagem
+  })
+
   it('desiste depois das tentativas e devolve o erro', async () => {
     const service = await setup(1)
     const client = resilient(service, { delaysMs: [1, 1] })

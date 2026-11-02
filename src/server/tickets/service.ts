@@ -82,6 +82,14 @@ export class SqlTicketService implements TicketService {
 
   async get(id: string, requesterId: string): Promise<Ticket | null> {
     await this.legacyCall()
+    return this.read(id, requesterId)
+  }
+
+  /**
+   * Leitura interna, sem passar pelo "legado" de novo. Cada operação pública faz uma única chamada ao legado,
+   * no começo: se ela falhar, nada foi gravado e a nova tentativa é segura (sem chamado duplicado).
+   */
+  private async read(id: string, requesterId: string): Promise<Ticket | null> {
     const rs = await this.db.execute({
       sql: 'SELECT * FROM tickets WHERE id = ? AND requester_id = ?',
       args: [id.toUpperCase(), requesterId],
@@ -91,7 +99,8 @@ export class SqlTicketService implements TicketService {
   }
 
   async events(id: string, requesterId: string): Promise<TicketEvent[]> {
-    const ticket = await this.get(id, requesterId)
+    await this.legacyCall()
+    const ticket = await this.read(id, requesterId)
     if (!ticket) throw new TicketNotFoundError(id)
     const rs = await this.db.execute({
       sql: 'SELECT * FROM ticket_events WHERE ticket_id = ? ORDER BY created_at ASC',
@@ -130,7 +139,7 @@ export class SqlTicketService implements TicketService {
       ],
     })
     await this.addEvent(id, 'criado', 'Chamado aberto pelo Nexo Assist', now)
-    const created = await this.get(id, input.requesterId)
+    const created = await this.read(id, input.requesterId)
     if (!created) throw new TicketNotFoundError(id)
     return created
   }
@@ -159,7 +168,8 @@ export class SqlTicketService implements TicketService {
     nextStatus: (t: Ticket) => TicketStatus,
     clearResolution = false,
   ): Promise<Ticket> {
-    const ticket = await this.get(id, requesterId)
+    await this.legacyCall()
+    const ticket = await this.read(id, requesterId)
     if (!ticket) throw new TicketNotFoundError(id)
     const now = this.sim.now()
     const status = nextStatus(ticket)
@@ -169,7 +179,7 @@ export class SqlTicketService implements TicketService {
       args: [status, now.getTime(), resolvedAt, ticket.id],
     })
     await this.addEvent(ticket.id, kind, text, now)
-    const updated = await this.get(ticket.id, requesterId)
+    const updated = await this.read(ticket.id, requesterId)
     if (!updated) throw new TicketNotFoundError(id)
     return updated
   }
