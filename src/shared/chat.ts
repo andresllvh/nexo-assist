@@ -93,7 +93,10 @@ export type Decision = {
 export type TraceStep = {
   id: string
   tool: string
+  /** o que o passo fez, para o painel de detalhes */
   label: string
+  /** rótulos curtos mostrados acima da resposta ("consultou seus chamados"); vazio = passo interno */
+  chips: string[]
   status: 'ok' | 'error'
   input: unknown
   output: unknown
