@@ -181,7 +181,7 @@ export class ConversationStore {
     for (const row of rs.rows) {
       const conversation = toConversation(row)
       const lastRs = await this.db.execute({
-        sql: 'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1',
+        sql: `SELECT * FROM messages WHERE conversation_id = ? AND author != 'system' ORDER BY created_at DESC, rowid DESC LIMIT 1`,
         args: [conversation.id],
       })
       // mensagens do funcionário que chegaram depois da última resposta de alguém do service desk
