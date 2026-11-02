@@ -4,6 +4,8 @@ Agent de atendimento do service desk de TI da Nexo (desafio técnico da Beyond t
 
 O funcionário descreve o problema num chat e o agent decide o que fazer a cada mensagem: responde com a central de ajuda, consulta ou complementa um chamado, monta um rascunho de chamado para confirmação ou chama um analista. Do outro lado, o analista tem um console para assumir conversas, responder e devolvê-las ao agent.
 
+**Versão publicada:** https://nexo-assist-snowy.vercel.app (contas de exemplo abaixo, qualquer senha).
+
 **A parte que mais cuidei foi a transparência:** acima de cada resposta aparecem as ações do agent ("consultou seus chamados", "classificou a prioridade"), e o botão **Como decidi** abre o que ele entendeu, que ação tomou, com que segurança, por quê e o passo a passo com entrada, saída, tempo e novas tentativas de cada ferramenta.
 
 ## Como rodar
@@ -133,12 +135,28 @@ Cada mensagem passa por quatro etapas (`src/server/agent/turn.ts`):
 - Chave de idempotência nas chamadas ao sistema de chamados real e o serviço como API HTTP separada.
 - Eventos em tempo real (SSE ou WebSocket) no console, com aviso de novas conversas na fila.
 - Testes ponta a ponta com Playwright dos fluxos principais.
-- Deploy na Vercel com o banco no Turso, limite de mensagens por IP e por funcionário e a chave do modelo só no servidor.
+- Limite também por IP e alertas de custo no deploy.
 - Busca na central de ajuda por significado (embeddings) quando houver mais artigos.
 
 ## Deploy
 
-Não publiquei. Para publicar, seria Vercel e Turso (`DATABASE_URL` e `DATABASE_AUTH_TOKEN`), com as chaves em variáveis de ambiente da plataforma e um limite de uso por sessão para evitar custo inesperado.
+Publicado na Vercel: **https://nexo-assist-snowy.vercel.app**
+
+- **Banco:** Turso (libsql na nuvem), conectado pela integração da Vercel. O código lê `DATABASE_URL` ou as variáveis que a integração cria (`DATABASE_TURSO_DATABASE_URL` e `DATABASE_TURSO_AUTH_TOKEN`). Na primeira requisição, as tabelas são criadas e os dados de exemplo inseridos.
+- **Chaves:** `GOOGLE_GENERATIVE_AI_API_KEY` e `SESSION_SECRET` ficam só nas variáveis de ambiente da Vercel, marcadas como secretas. O `.vercelignore` impede que o `.env` local e o banco local subam junto com o código.
+- **Limite de uso, contra abuso e custo inesperado:**
+  - até 60 mensagens por funcionário por hora (`NEXO_LIMIT_PER_HOUR`);
+  - teto de 500 respostas do agent com o modelo por dia no sistema todo (`NEXO_LIMIT_PER_DAY`);
+  - além das 30 mensagens por sessão.
+
+  Ao chegar no limite, a interface explica o motivo e indica o ramal do service desk.
+- **Como publiquei:**
+  1. `vercel link`;
+  2. criar o banco Turso em Storage, no painel do projeto;
+  3. `vercel env add` para as duas chaves;
+  4. `vercel --prod`.
+
+Como é uma demonstração com login aberto, todos os avaliadores compartilham os mesmos dados de exemplo.
 
 ## Uso de IA
 
