@@ -320,6 +320,8 @@ async function cancelOutcome(turn: TurnContext, draftId: string, reason: string,
 
 async function selectOutcome(turn: TurnContext, ticketId: string): Promise<Outcome> {
   const { view } = await lookupTicket(turn, ticketId)
+  // o chamado escolhido passa a ser o assunto da conversa (vai junto se ela for transferida)
+  await turn.store.setTicket(turn.conversationId, view.id)
   turn.blocks.push({ kind: 'ticket_card', ticket: view })
   if (view.overdue) turn.blocks.push({ kind: 'options', question: null, options: OVERDUE_OPTIONS })
   return {
@@ -339,11 +341,17 @@ async function selectOutcome(turn: TurnContext, ticketId: string): Promise<Outco
 async function handOffOutcome(
   turn: TurnContext,
   route: RouterOutput,
-  kind: 'pedido' | 'baixa_confianca',
+  initialKind: 'pedido' | 'baixa_confianca',
   history: Awaited<ReturnType<TurnContext['store']['messages']>>,
 ): Promise<Outcome> {
+  let kind: 'pedido' | 'baixa_confianca' | 'vencido' = initialKind
   const conversation = await turn.store.get(turn.conversationId)
   const ticketId = route.chamado ?? conversation?.ticketId ?? null
+  // pedido de analista sobre um chamado vencido conta como "vencido": vai para o N2
+  if (kind === 'pedido' && ticketId) {
+    const ticket = await turn.tickets.get(ticketId, turn.employee.id).catch(() => null)
+    if (ticket && toTicketView(ticket, turn.now).overdue) kind = 'vencido'
+  }
   const recent = history
     .filter((m) => m.author === 'employee')
     .slice(-4)
@@ -353,9 +361,10 @@ async function handOffOutcome(
   const reason =
     kind === 'pedido'
       ? 'o funcionário pediu para falar com um analista'
-      : `o agent não teve segurança para decidir (confiança ${Math.round(route.confianca * 100)}%)`
+      : kind === 'vencido'
+        ? `o funcionário pediu um analista e o ${ticketId} está com o prazo vencido`
+        : `o agent não teve segurança para decidir (confiança ${Math.round(route.confianca * 100)}%)`
   const result = await handOff(turn, { kind, reason, summary, ticketId, confidence: route.confianca })
-  // vencido pesa mais: o analista precisa saber que o prazo já passou
   return {
     text: kind === 'baixa_confianca' ? `Não tenho certeza de como ajudar com isso, então vou chamar uma pessoa. ${result.text}` : result.text,
     decision: {
