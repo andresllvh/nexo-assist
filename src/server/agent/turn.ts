@@ -29,7 +29,7 @@ export type TurnInput =
 /** Abaixo disso o agent não decide sozinho: chama um analista. */
 export const MIN_CONFIDENCE = 0.4
 
-const MODEL = process.env.NEXO_MODEL ?? 'google/gemini-3.5-flash'
+const MODEL = process.env.NEXO_MODEL ?? 'google/gemini-3.5-flash-lite'
 // entender a mensagem é uma tarefa simples: um modelo menor custa menos e tem cota separada
 const ROUTER_MODEL = process.env.NEXO_ROUTER_MODEL ?? 'google/gemini-3.5-flash-lite'
 
